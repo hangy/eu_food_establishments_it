@@ -1,20 +1,12 @@
 // This is a template for a Node.js scraper on morph.io (https://morph.io)
 
-var cheerio = require("cheerio");
-var request = require("request");
-var sqlite3 = require("sqlite3").verbose();
+const cheerio = require("cheerio");
+const rp = require("request-promise-native");
+const sqlite = require("sqlite");
 
-function initDatabase(callback) {
-	// Set up sqlite database.
-	var db = new sqlite3.Database("data.sqlite");
-	db.serialize(function() {
-		callback(db);
-	});
-}
-
-function updateRow(db, section, item) {
+/*function updateRow(db, section, item) {
 	// Insert some data.
-	var statement = db.prepare("INSERT INTO data (approvalNumber, name, vat, taxCode, townRegion, category, associatedActivities, species, remarks, section) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+	const statement = db.prepare("INSERT INTO data (approvalNumber, name, vat, taxCode, townRegion, category, associatedActivities, species, remarks, section) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 	statement.run(item.approvalNumber, item.name, item.vat, item.taxCode, item.townRegion, item.category, item.associatedActivities, item.species, item.remarks, section);
 	statement.finalize();
 }
@@ -24,66 +16,66 @@ function readRows(db) {
 	db.each("SELECT rowid AS id, approvalNumber FROM data", function(err, row) {
 		console.log(row.id + ": " + row.approvalNumber);
 	});
-}
+}*/
 
-function fetchPage(url, callback) {
-	request(url, function (error, response, body) {
-		if (error) {
-			console.log("Error requesting page: " + error);
+async function fetchListOfLists() {
+	const $ = await fetchCheerio("http://www.salute.gov.it/portale/temi/trasferimento_PROD.jsp");
+	const result = [];
+console.log(1);
+	for (const td of $.find("td.tabella01_cella_SX")) {
+		var title = td.children("i").text().trim();
+		title = title.substring(1, title.length - 1)
+		if (title === "All sections") {
 			return;
 		}
 
-		callback(body);
-	});
+		const tr = td.parent();
+		const url = tr.find("a").attr('href');
+console.log(2);
+		result.push({title: title, url: url});
+console.log(3);
+	}
+
+console.log(x);
+console.log(4);
+	return result;
 }
 
-function fetchListOfLists(callback, done) {
-	fetchCheerio("http://www.salute.gov.it/portale/temi/trasferimento_PROD.jsp", function($) {
-		var x = $("td.tabella01_cella_SX").each(function () {
-			var td = $(this);
-			var title = td.children("i").text().trim();
-			title = title.substring(1, title.length - 1)
-			if (title === "All sections") {
+async function fetchTable(url) {
+	const $ = await fetchCheerio(url);
+	const tables = $("table.tabella01");
+	const result = [];
+	if (!tables || tables.length === 0) {
+		console.log("no tables for " + url);
+	} else {
+		const table = $(tables[0]);
+		table.find("tr").each(function () {
+			const tr = $(this);
+			const firstTd = tr.find("td")[0];
+			if (!firstTd || !$(firstTd).hasClass("tabella01_cella_SX")) {
 				return;
 			}
 
-			var tr = td.parent();
-			var url = tr.find("a").attr('href');
-			callback(title, url);
+			result.push(parseRow($, tr));
 		});
+	}
 
-		done();
-	});
+	return result;
 }
 
-function fetchTable(url, callback) {
-	fetchCheerio(url, function($) {
-		var tables = $("table.tabella01");
-		if (!tables || tables.length === 0) {
-			console.log("no tables for " + url);
-		} else {
-			var table = $(tables[0]);
-			table.find("tr").each(function () {
-				var tr = $(this);
-				var firstTd = tr.find("td")[0];
-				if (!firstTd || !$(firstTd).hasClass("tabella01_cella_SX")) {
-					return;
-				}
-
-				callback(parseRow($, tr));
-			});
+async function fetchCheerio(url) {
+	const options = {
+		uri: 'http://www.google.com',
+		transform: function (body) {
+			return cheerio.load(body);
 		}
-	});
-}
+	};
 
-function fetchCheerio(url, callback) {
-	fetchPage(url, function(body) {
-		callback(cheerio.load(body));
-	});
+	return await rp(options);
 }
 
 function parseRow($, tr) {
-	var tds = tr.find("td");
+	const tds = tr.find("td");
 
 	return {
 		approvalNumber: $(tds[0]).text().trim(),
@@ -98,16 +90,18 @@ function parseRow($, tr) {
 	};
 }
 
-function run(db) {
-	fetchListOfLists(function (section, url) {
-		fetchTable(url, function (item) {
-			updateRow(db, section, item);
-		});
-	}, function() {
-		readRows(db);
+async function run() {
+	const db = await sqlite.open("data.sqlite", { Promise });
+	await db.migrate();
 
-//		db.close();
-	});
+	const lists = await fetchListOfLists();
+	for (const value of lists) {
+		var table = await fetchTable(value.url);
+		for (const item of table) {
+			console.log(item);
+		}
+	  console.log(value);
+	}
 }
 
-initDatabase(run);
+run();
