@@ -4,6 +4,7 @@
   "dependencies": {
     "cheerio": "latest",
     "request": "latest",
+    "request-promise-native": "latest",
     "sqlite": "latest"
   },
   "keywords": [
