@@ -8,7 +8,6 @@ function initDatabase(callback) {
 	// Set up sqlite database.
 	var db = new sqlite3.Database("data.sqlite");
 	db.serialize(function() {
-		db.run("CREATE TABLE IF NOT EXISTS data (approvalNumber TEXT, name TEXT, vat TEXT, taxCode TEXT, townRegion TEXT, category TEXT, associatedActivities TEXT, species TEXT, remarks TEXT, section TEXT)");
 		callback(db);
 	});
 }
