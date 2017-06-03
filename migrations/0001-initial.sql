@@ -1,3 +1,4 @@
+-- Up
 CREATE TABLE IF NOT EXISTS data (
   approvalNumber TEXT,
   name TEXT,
@@ -11,3 +12,5 @@ CREATE TABLE IF NOT EXISTS data (
   section TEXT
 );
 
+-- Down
+DROP TABLE data;
