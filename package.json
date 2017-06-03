@@ -1,6 +1,10 @@
 {
   "version": "0.0.1",
   "main": "scraper.js",
+  "private": true,
+  "scripts": {
+    "test": "./node_modules/.bin/eslint scraper.js"
+  },
   "dependencies": {
     "cheerio": "latest",
     "request": "latest",
@@ -10,5 +14,13 @@
   "keywords": [
     "scraper",
     "morph"
-  ]
+  ],
+  "devDependencies": {
+    "eslint": "latest",
+    "eslint-config-standard": "latest",
+    "eslint-plugin-import": "^2.3.0",
+    "eslint-plugin-node": "^5.0.0",
+    "eslint-plugin-promise": "latest",
+    "eslint-plugin-standard": "latest"
+  }
 }
