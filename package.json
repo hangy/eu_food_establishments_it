@@ -1,6 +1,12 @@
 {
   "version": "0.0.1",
   "main": "scraper.js",
+  "author": "hangy",
+  "license": "DO WHAT THE FUCK YOU WANT TO BUT IT'S NOT MY FAULT PUBLIC LICENSE v3",
+  "bugs": {
+    "url": "https://github.com/hangy/eu_food_establishments_it/issues"
+  },
+  "homepage": "https://github.com/hangy/eu_food_establishments_it/",
   "dependencies": {
     "cheerio": "latest",
     "request": "latest",
