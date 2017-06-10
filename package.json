@@ -1,6 +1,10 @@
 {
   "version": "0.0.1",
   "main": "scraper.js",
+  "private": true,
+  "scripts": {
+    "test": "./node_modules/.bin/eslint scraper.js"
+  },
   "author": "hangy",
   "license": "DO WHAT THE FUCK YOU WANT TO BUT IT'S NOT MY FAULT PUBLIC LICENSE v3",
   "bugs": {
@@ -10,10 +14,20 @@
   "dependencies": {
     "cheerio": "latest",
     "request": "latest",
-    "sqlite3": "latest"
+    "request-promise-native": "^1.0.4"
   },
   "keywords": [
     "scraper",
     "morph"
-  ]
+  ],
+  "devDependencies": {
+    "eslint": "latest",
+    "eslint-config-standard": "latest",
+    "eslint-plugin-import": "latest",
+    "eslint-plugin-node": "latest",
+    "eslint-plugin-promise": "latest",
+    "eslint-plugin-react": "^7.0.1",
+    "eslint-plugin-standard": "latest",
+    "sqlite": "^2.8.0"
+  }
 }

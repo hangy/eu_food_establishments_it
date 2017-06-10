@@ -1,114 +1,98 @@
 // This is a template for a Node.js scraper on morph.io (https://morph.io)
 
-var cheerio = require("cheerio");
-var request = require("request");
-var sqlite3 = require("sqlite3").verbose();
+const cheerio = require('cheerio')
+const rp = require('request-promise-native')
+const sqlite = require('sqlite')
 
-function initDatabase(callback) {
-	// Set up sqlite database.
-	var db = new sqlite3.Database("data.sqlite");
-	db.serialize(function() {
-		db.run("CREATE TABLE IF NOT EXISTS data (approvalNumber TEXT, name TEXT, vat TEXT, taxCode TEXT, townRegion TEXT, category TEXT, associatedActivities TEXT, species TEXT, remarks TEXT, section TEXT)");
-		callback(db);
-	});
+// Since jQuery/cheerio objects are array-like,
+// give them the same iterator method Arrays have
+// https://hacks.mozilla.org/2015/04/es6-in-depth-iterators-and-the-for-of-loop/
+cheerio.prototype[Symbol.iterator] = Array.prototype[Symbol.iterator];
+
+async function updateRow(db, section, item) {
+  const statement = await db.prepare('INSERT INTO data (approvalNumber, name, vat, taxCode, townRegion, category, associatedActivities, species, remarks, section) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+  await statement.run(item.approvalNumber, item.name, item.vat, item.taxCode, item.townRegion, item.category, item.associatedActivities, item.species, item.remarks, section)
+  await statement.finalize()
 }
 
-function updateRow(db, section, item) {
-	// Insert some data.
-	var statement = db.prepare("INSERT INTO data (approvalNumber, name, vat, taxCode, townRegion, category, associatedActivities, species, remarks, section) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-	statement.run(item.approvalNumber, item.name, item.vat, item.taxCode, item.townRegion, item.category, item.associatedActivities, item.species, item.remarks, section);
-	statement.finalize();
+async function fetchListOfLists () {
+  const $ = await fetchCheerio('http://www.salute.gov.it/portale/temi/trasferimento_PROD.jsp')
+  const result = []
+  const tds = $('td.tabella01_cella_SX')
+  for (const td of tds) {
+    var title = $(td).children('i').text().trim()
+    title = title.substring(1, title.length - 1)
+    if (title === 'All sections') {
+      continue
+    }
+
+    const tr = $(td).parent()
+    const url = $(tr).find('a').attr('href')
+    result.push({title: title, url: url})
+  }
+
+  return result
 }
 
-function readRows(db) {
-	// Read some data.
-	db.each("SELECT rowid AS id, approvalNumber FROM data", function(err, row) {
-		console.log(row.id + ": " + row.approvalNumber);
-	});
+async function fetchTable (url) {
+  const $ = await fetchCheerio(url)
+  const tables = $('table.tabella01')
+  const result = []
+  if (!tables || tables.length === 0) {
+    console.log('no tables for ' + url)
+  } else {
+    const table = $(tables[0])
+    for (const tr of table.find('tr')) {
+      const firstTd = $(tr).find('td')[0]
+      if (!firstTd || !$(firstTd).hasClass('tabella01_cella_SX')) {
+        continue
+      }
+
+      result.push(parseRow($, tr))
+    }
+  }
+
+  return result
 }
 
-function fetchPage(url, callback) {
-	request(url, function (error, response, body) {
-		if (error) {
-			console.log("Error requesting page: " + error);
-			return;
-		}
+async function fetchCheerio (url) {
+  const options = {
+    uri: url,
+    transform: function (body) {
+      return cheerio.load(body)
+    }
+  }
 
-		callback(body);
-	});
+  return rp(options)
 }
 
-function fetchListOfLists(callback, done) {
-	fetchCheerio("http://www.salute.gov.it/portale/temi/trasferimento_PROD.jsp", function($) {
-		var x = $("td.tabella01_cella_SX").each(function () {
-			var td = $(this);
-			var title = td.children("i").text().trim();
-			title = title.substring(1, title.length - 1)
-			if (title === "All sections") {
-				return;
-			}
+function parseRow ($, tr) {
+  const tds = $(tr).find('td')
 
-			var tr = td.parent();
-			var url = tr.find("a").attr('href');
-			callback(title, url);
-		});
-
-		done();
-	});
+  return {
+    approvalNumber: $(tds[0]).text().trim(),
+    name: $(tds[1]).text().trim(),
+    vat: $(tds[2]).text().trim(),
+    taxCode: $(tds[3]).text().trim(),
+    townRegion: $(tds[4]).text().trim(),
+    category: $(tds[5]).text().trim(),
+    associatedActivities: $(tds[6]).text().trim(),
+    species: tds.length >= 8 ? $(tds[7]).text().trim() : null,
+    remarks: tds.length >= 9 ? $(tds[8]).text().trim() : null
+  }
 }
 
-function fetchTable(url, callback) {
-	fetchCheerio(url, function($) {
-		var tables = $("table.tabella01");
-		if (!tables || tables.length === 0) {
-			console.log("no tables for " + url);
-		} else {
-			var table = $(tables[0]);
-			table.find("tr").each(function () {
-				var tr = $(this);
-				var firstTd = tr.find("td")[0];
-				if (!firstTd || !$(firstTd).hasClass("tabella01_cella_SX")) {
-					return;
-				}
+async function run () {
+  const db = await sqlite.open('data.sqlite', { Promise })
+  await db.migrate()
 
-				callback(parseRow($, tr));
-			});
-		}
-	});
+  const lists = await fetchListOfLists()
+  for (const value of lists) {
+    var table = await fetchTable(value.url)
+    for (const item of table) {
+      await updateRow(db, value.title, item)
+    }
+  }
 }
 
-function fetchCheerio(url, callback) {
-	fetchPage(url, function(body) {
-		callback(cheerio.load(body));
-	});
-}
-
-function parseRow($, tr) {
-	var tds = tr.find("td");
-
-	return {
-		approvalNumber: $(tds[0]).text().trim(),
-		name: $(tds[1]).text().trim(),
-		vat: $(tds[2]).text().trim(),
-		taxCode: $(tds[3]).text().trim(),
-		townRegion: $(tds[4]).text().trim(),
-		category: $(tds[5]).text().trim(),
-		associatedActivities: $(tds[6]).text().trim(),
-		species: tds.length >= 8 ? $(tds[7]).text().trim() : null,
-		remarks: tds.length >= 9 ? $(tds[8]).text().trim() : null
-	};
-}
-
-function run(db) {
-	fetchListOfLists(function (section, url) {
-		fetchTable(url, function (item) {
-			updateRow(db, section, item);
-		});
-	}, function() {
-		readRows(db);
-
-//		db.close();
-	});
-}
-
-initDatabase(run);
+run()
