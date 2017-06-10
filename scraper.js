@@ -93,6 +93,8 @@ async function run () {
       await updateRow(db, value.title, item)
     }
   }
+
+  await db.close()
 }
 
 run()
