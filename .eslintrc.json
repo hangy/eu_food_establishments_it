@@ -2,6 +2,7 @@
     "extends": "standard",
     "plugins": [
         "standard",
-        "promise"
+        "promise",
+        "react"
     ]
 }
