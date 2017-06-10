@@ -1,16 +1,33 @@
 // This is a template for a Node.js scraper on morph.io (https://morph.io)
 
 const cheerio = require('cheerio')
-const iconvlite = require('iconv-lite');
+const iconvlite = require('iconv-lite')
 const rp = require('request-promise-native')
 const sqlite = require('sqlite')
 
 // Since jQuery/cheerio objects are array-like,
 // give them the same iterator method Arrays have
 // https://hacks.mozilla.org/2015/04/es6-in-depth-iterators-and-the-for-of-loop/
-cheerio.prototype[Symbol.iterator] = Array.prototype[Symbol.iterator];
+cheerio.prototype[Symbol.iterator] = Array.prototype[Symbol.iterator]
 
-async function updateRow(db, section, item) {
+async function truncate (db) {
+  await deleteRows(db)
+  await vacuum(db)
+}
+
+async function deleteRows (db) {
+  const statement = await db.prepare('DELETE FROM data')
+  await statement.run()
+  await statement.finalize()
+}
+
+async function vacuum (db) {
+  const statement = await db.prepare('VACUUM')
+  await statement.run()
+  await statement.finalize()
+}
+
+async function updateRow (db, section, item) {
   const statement = await db.prepare('INSERT INTO data (approvalNumber, name, vat, taxCode, townRegion, category, associatedActivities, species, remarks, section) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
   await statement.run(item.approvalNumber, item.name, item.vat, item.taxCode, item.townRegion, item.category, item.associatedActivities, item.species, item.remarks, section)
   await statement.finalize()
@@ -89,6 +106,7 @@ function parseRow ($, tr) {
 async function run () {
   const db = await sqlite.open('data.sqlite', { Promise })
   await db.migrate()
+  await truncate(db)
 
   const lists = await fetchListOfLists()
   for (const value of lists) {
