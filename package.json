@@ -14,7 +14,8 @@
   "dependencies": {
     "cheerio": "latest",
     "request": "latest",
-    "request-promise-native": "^1.0.4"
+    "request-promise-native": "^1.0.4",
+    "sqlite": "^2.8.0"
   },
   "keywords": [
     "scraper",
@@ -27,8 +28,7 @@
     "eslint-plugin-node": "latest",
     "eslint-plugin-promise": "latest",
     "eslint-plugin-react": "^7.0.1",
-    "eslint-plugin-standard": "latest",
-    "sqlite": "^2.8.0"
+    "eslint-plugin-standard": "latest"
   },
   "engines": {
     "node": "8.1"
