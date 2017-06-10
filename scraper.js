@@ -20,9 +20,12 @@ function readRows(db) {
 
 async function fetchListOfLists () {
   const $ = await fetchCheerio('http://www.salute.gov.it/portale/temi/trasferimento_PROD.jsp')
+console.log($.html())
   const result = []
-  console.log(1)
-  for (const td of $.find('td.tabella01_cella_SX')) {
+  const tds = $.find('td.tabella01_cella_SX')
+console.log(tds.text())
+{
+  const td = tds[i]
     var title = td.children('i').text().trim()
     title = title.substring(1, title.length - 1)
     if (title === 'All sections') {
@@ -31,9 +34,9 @@ async function fetchListOfLists () {
 
     const tr = td.parent()
     const url = tr.find('a').attr('href')
-    console.log(2)
-    result.push({title: title, url: url})
     console.log(3)
+    result.push({title: title, url: url})
+    console.log(4)
   }
 
   console.log(4)
@@ -41,8 +44,8 @@ async function fetchListOfLists () {
 }
 
 async function fetchTable (url) {
-  const $ = await fetchCheerio(url)
-  const tables = $('table.tabella01')
+  const $ = cheerio(await fetchCheerio(url))
+  const tables = $.find('table.tabella01')
   const result = []
   if (!tables || tables.length === 0) {
     console.log('no tables for ' + url)
@@ -55,7 +58,7 @@ async function fetchTable (url) {
         return
       }
 
-      result.push(parseRow($, tr))
+      result.push(parseRow(tr))
     })
   }
 
@@ -64,7 +67,7 @@ async function fetchTable (url) {
 
 async function fetchCheerio (url) {
   const options = {
-    uri: 'http://www.google.com',
+    uri: url,
     transform: function (body) {
       return cheerio.load(body)
     }
@@ -73,7 +76,7 @@ async function fetchCheerio (url) {
   return rp(options)
 }
 
-function parseRow ($, tr) {
+function parseRow (tr) {
   const tds = tr.find('td')
 
   return {
