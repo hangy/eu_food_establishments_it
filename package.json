@@ -13,6 +13,7 @@
   "homepage": "https://github.com/hangy/eu_food_establishments_it/",
   "dependencies": {
     "cheerio": "latest",
+    "iconv-lite": "^0.4.17",
     "request": "latest",
     "request-promise-native": "^1.0.4",
     "sqlite": "^2.8.0"

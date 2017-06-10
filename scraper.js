@@ -1,6 +1,7 @@
 // This is a template for a Node.js scraper on morph.io (https://morph.io)
 
 const cheerio = require('cheerio')
+const iconvlite = require('iconv-lite');
 const rp = require('request-promise-native')
 const sqlite = require('sqlite')
 
@@ -58,8 +59,11 @@ async function fetchTable (url) {
 async function fetchCheerio (url) {
   const options = {
     uri: url,
+    encoding: null,
     transform: function (body) {
-      return cheerio.load(body)
+      // original should be iso-8859-1 but apparently does not get decoded by request properly
+      const decodedBody = iconvlite.decode(body, 'iso-8859-1')
+      return cheerio.load(decodedBody)
     }
   }
 
