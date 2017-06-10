@@ -4,6 +4,11 @@ const cheerio = require('cheerio')
 const rp = require('request-promise-native')
 const sqlite = require('sqlite')
 
+// Since jQuery/cheerio objects are array-like,
+// give them the same iterator method Arrays have
+// https://hacks.mozilla.org/2015/04/es6-in-depth-iterators-and-the-for-of-loop/
+cheerio.prototype[Symbol.iterator] = Array.prototype[Symbol.iterator];
+
 /* function updateRow(db, section, item) {
   // Insert some data.
   const statement = db.prepare('INSERT INTO data (approvalNumber, name, vat, taxCode, townRegion, category, associatedActivities, species, remarks, section) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
@@ -20,46 +25,39 @@ function readRows(db) {
 
 async function fetchListOfLists () {
   const $ = await fetchCheerio('http://www.salute.gov.it/portale/temi/trasferimento_PROD.jsp')
-console.log($.html())
   const result = []
-  const tds = $.find('td.tabella01_cella_SX')
-console.log(tds.text())
-{
-  const td = tds[i]
-    var title = td.children('i').text().trim()
+  const tds = $('td.tabella01_cella_SX')
+  for (const td of tds) {
+    var title = $(td).children('i').text().trim()
     title = title.substring(1, title.length - 1)
     if (title === 'All sections') {
-      return
+      continue
     }
 
-    const tr = td.parent()
-    const url = tr.find('a').attr('href')
-    console.log(3)
+    const tr = $(td).parent()
+    const url = $(tr).find('a').attr('href')
     result.push({title: title, url: url})
-    console.log(4)
   }
 
-  console.log(4)
   return result
 }
 
 async function fetchTable (url) {
-  const $ = cheerio(await fetchCheerio(url))
-  const tables = $.find('table.tabella01')
+  const $ = await fetchCheerio(url)
+  const tables = $('table.tabella01')
   const result = []
   if (!tables || tables.length === 0) {
     console.log('no tables for ' + url)
   } else {
     const table = $(tables[0])
-    table.find('tr').each(function () {
-      const tr = $(this)
-      const firstTd = tr.find('td')[0]
+    for (const tr of table.find('tr')) {
+      const firstTd = $(tr).find('td')[0]
       if (!firstTd || !$(firstTd).hasClass('tabella01_cella_SX')) {
-        return
+        continue
       }
 
-      result.push(parseRow(tr))
-    })
+      result.push(parseRow($, tr))
+    }
   }
 
   return result
@@ -76,8 +74,8 @@ async function fetchCheerio (url) {
   return rp(options)
 }
 
-function parseRow (tr) {
-  const tds = tr.find('td')
+function parseRow ($, tr) {
+  const tds = $(tr).find('td')
 
   return {
     approvalNumber: $(tds[0]).text().trim(),
@@ -98,7 +96,6 @@ async function run () {
 
   const lists = await fetchListOfLists()
   for (const value of lists) {
-    console.log(value)
     var table = await fetchTable(value.url)
     for (const item of table) {
       console.log(item)
