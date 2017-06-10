@@ -23,6 +23,7 @@
     "morph"
   ],
   "devDependencies": {
+    "locate-path": "^2.0.0",
     "eslint": "latest",
     "eslint-config-standard": "latest",
     "eslint-plugin-import": "latest",
