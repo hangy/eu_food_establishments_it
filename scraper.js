@@ -9,19 +9,11 @@ const sqlite = require('sqlite')
 // https://hacks.mozilla.org/2015/04/es6-in-depth-iterators-and-the-for-of-loop/
 cheerio.prototype[Symbol.iterator] = Array.prototype[Symbol.iterator];
 
-/* function updateRow(db, section, item) {
-  // Insert some data.
-  const statement = db.prepare('INSERT INTO data (approvalNumber, name, vat, taxCode, townRegion, category, associatedActivities, species, remarks, section) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-  statement.run(item.approvalNumber, item.name, item.vat, item.taxCode, item.townRegion, item.category, item.associatedActivities, item.species, item.remarks, section)
-  statement.finalize()
+async function updateRow(db, section, item) {
+  const statement = await db.prepare('INSERT INTO data (approvalNumber, name, vat, taxCode, townRegion, category, associatedActivities, species, remarks, section) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+  await statement.run(item.approvalNumber, item.name, item.vat, item.taxCode, item.townRegion, item.category, item.associatedActivities, item.species, item.remarks, section)
+  await statement.finalize()
 }
-
-function readRows(db) {
-  // Read some data.
-  db.each('SELECT rowid AS id, approvalNumber FROM data', function(err, row) {
-    console.log(row.id + ': ' + row.approvalNumber)
-  })
-} */
 
 async function fetchListOfLists () {
   const $ = await fetchCheerio('http://www.salute.gov.it/portale/temi/trasferimento_PROD.jsp')
@@ -98,7 +90,7 @@ async function run () {
   for (const value of lists) {
     var table = await fetchTable(value.url)
     for (const item of table) {
-      console.log(item)
+      await updateRow(db, value.title, item)
     }
   }
 }
